@@ -20,11 +20,15 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
+#include "i2c.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "oled.h"
+#include "fonts.h"
+#include "keyboard.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,6 +54,7 @@
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -88,9 +93,20 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
+  oled_Init();
+  keyboard_Init();
   /* USER CODE END 2 */
+
+  /* Call init function for freertos objects (in freertos.c) */
+  MX_FREERTOS_Init();
+
+  /* Start scheduler */
+  osKernelStart();
+  
+  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -99,6 +115,45 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+#if 0
+	  keyboard_key_set key_set;
+		int i;
+		int rc;
+		char display_str[40] = "error";
+
+		rc = keyboard_Get(&key_set);
+		if (rc == 0)
+		{
+			for (i = 0; i < 12; i++)
+			{
+				display_str[11 - i] = key_set % 2 == 0 ? '0' : '1';
+				key_set >>= 1;
+			}
+			display_str[12] = '\0';
+		}
+
+		//HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+		oled_SetCursor(0, 0);
+		oled_Fill(Black);
+		oled_WriteString(display_str, Font_7x10, White);
+		//oled_WriteString((i++ % 2) == 0 ? "kek" : "lol", Font_16x26, White);
+		oled_UpdateScreen();
+		HAL_Delay(5);
+#endif
+	  /*
+	  HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+	      HAL_Delay(500);
+	      HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
+	      HAL_Delay(500);
+	      HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
+	      HAL_Delay(500);
+	      HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
+	      HAL_Delay(500);
+	      HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
+	      HAL_Delay(500);
+	      HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
+	      HAL_Delay(500);
+	      */
   }
   /* USER CODE END 3 */
 }
@@ -144,6 +199,27 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM1 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM1) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.
