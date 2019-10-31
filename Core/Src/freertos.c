@@ -30,6 +30,8 @@
 #include "oled.h"
 #include "fonts.h"
 #include "keyboard.h"
+#include "../snk/snk.h"
+#include "../snk/snk_util.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -41,7 +43,8 @@
 /* USER CODE BEGIN PD */
 #define MAX_GLOABL_QUEUE_MSG_COUNT 100
 #define MAX_GLOABL_QUEUE_MSG_SIZE 1
-
+#define MAX_TIMER_QUEUE_MSG_COUNT 100
+#define MAX_TIMER_QUEUE_MSG_SIZE 1
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -52,6 +55,7 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 osMessageQueueId_t global_queue;
+osMessageQueueId_t timer_queue;
 /* USER CODE END Variables */
 osThreadId_t task_1Handle;
 osThreadId_t task_2Handle;
@@ -115,7 +119,7 @@ osKernelInitialize();
   const osThreadAttr_t task_1_attributes = {
     .name = "task_1",
     .priority = (osPriority_t) osPriorityNormal,
-    .stack_size = 128
+    .stack_size = 4096
   };
   task_1Handle = osThreadNew(start_task_1, NULL, &task_1_attributes);
 
@@ -123,13 +127,14 @@ osKernelInitialize();
   const osThreadAttr_t task_2_attributes = {
     .name = "task_2",
     .priority = (osPriority_t) osPriorityNormal,
-    .stack_size = 128
+    .stack_size = 1024
   };
   task_2Handle = osThreadNew(start_task_2, NULL, &task_2_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  osTimerStart(global_timerHandle, 50);
+  osTimerStart(global_timerHandle, 100);
   global_queue = osMessageQueueNew(MAX_GLOABL_QUEUE_MSG_COUNT, MAX_GLOABL_QUEUE_MSG_SIZE, NULL);
+  timer_queue = osMessageQueueNew(MAX_TIMER_QUEUE_MSG_COUNT, MAX_TIMER_QUEUE_MSG_SIZE, NULL);
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
@@ -144,19 +149,36 @@ osKernelInitialize();
 /* USER CODE END Header_start_task_1 */
 void start_task_1(void *argument)
 {
-    
-    
-    
-
   /* USER CODE BEGIN start_task_1 */
-	uint8_t buf[MAX_GLOABL_QUEUE_MSG_SIZE] = {0};
-  /* Infinite loop */
-  for(;;)
-  {
-	  buf[0]++;
-	  osMessageQueuePut(global_queue, buf, 0, 5000);
-	  osDelay(40);
-  }
+	 uint8_t buf[MAX_GLOABL_QUEUE_MSG_SIZE] = {0};
+		  //snk_field_obstacle obstacles[] = {{{0, 0}, {5, 0}}};
+		  snk_position start_position = {5, 5};
+		  snk_process process;
+		  snk_field field;
+		  uint8_t draw_data[2048];
+
+		  snk_create_field(42, 20, 0, NULL, 1, &field);
+
+		  snk_create(&field, &start_position, SNK_DIRECTION_RIGHT, 5, &process);
+
+	  /* Infinite loop */
+	  for(;;)
+	  {
+		  if (osMessageQueueGet(global_queue, buf, 0, 10) == osOK)
+		  {
+			  snk_choose_direction(&process, buf[0]);
+		  }
+		  if (osMessageQueueGet(timer_queue, buf, 0, 10) == osOK)
+		  {
+			  snk_next_tick(&process);
+			  snk_render(&process, draw_data, sizeof(draw_data));
+			  oled_SetCursor(0, 0);
+			  oled_Fill(Black);
+			  oled_DrawData(draw_data, field.width, field.height);
+			  oled_UpdateScreen();
+		  }
+
+	  }
   /* USER CODE END start_task_1 */
 }
 
@@ -170,26 +192,48 @@ void start_task_1(void *argument)
 void start_task_2(void *argument)
 {
   /* USER CODE BEGIN start_task_2 */
-	  uint8_t buf[MAX_GLOABL_QUEUE_MSG_SIZE] = {0};
-	  uint8_t points[] = {10, 20, 60, 90, 200, 220};
-	  unsigned int i;
-  /* Infinite loop */
-  for(;;)
-  {
-	  osMessageQueueGet(global_queue, buf, 0, 5000);
-	  for (i = 0; i < sizeof(points) / sizeof(points[0]); i++)
-	  {
-		  if (buf[0] == points[i])
-		  {
-			  //oled_Fill(Black);
-			  //oled_WriteString("kek", Font_16x26, White);
-			  //oled_UpdateScreen();
-			  //HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);
-			  break;
-		  }
-	  }
-    //osDelay(1);
-  }
+	uint8_t buf[MAX_GLOABL_QUEUE_MSG_SIZE] = {0};
+    snk_direction new_direction;
+    keyboard_key_set key_set_old;
+    keyboard_key_set key_set_new;
+    keyboard_key_set key_set;
+	//int i;
+	int rc;
+	keyboard_Get(&key_set_old);
+
+	while (1)
+	{
+		osDelay(1..0);
+		rc = keyboard_Get(&key_set_new);
+		//rc = 1;
+		if (rc == 0 && key_set_new != key_set_old)
+		{
+			key_set = (~key_set_old) & key_set_new;
+			key_set_old = key_set_new;
+			if (keyboard_key_is_in_set(KEYBOARD_KEY_1, &key_set))
+			{
+				new_direction = SNK_DIRECTION_UP;
+			}
+			else if (keyboard_key_is_in_set(KEYBOARD_KEY_3, &key_set))
+			{
+				new_direction = SNK_DIRECTION_LEFT;
+			}
+			else if (keyboard_key_is_in_set(KEYBOARD_KEY_4, &key_set))
+			{
+				new_direction = SNK_DIRECTION_DOWN;
+			}
+			else if (keyboard_key_is_in_set(KEYBOARD_KEY_5, &key_set))
+			{
+				new_direction = SNK_DIRECTION_RIGHT;
+			}
+			else
+			{
+				continue;
+			}
+			buf[0] = new_direction;
+			osMessageQueuePut(global_queue, buf, 0, 5000);
+		}
+	}
   /* USER CODE END start_task_2 */
 }
 
@@ -197,7 +241,8 @@ void start_task_2(void *argument)
 void global_timer_callback(void *argument)
 {
   /* USER CODE BEGIN global_timer_callback */
-#if 1
+	uint8_t buf[MAX_TIMER_QUEUE_MSG_SIZE] = {0};
+#if 0
     keyboard_key_set key_set;
 	int i;
 	int rc;
@@ -220,13 +265,16 @@ void global_timer_callback(void *argument)
 	oled_WriteString(display_str, Font_7x10, White);
 	//oled_WriteString((i++ % 2) == 0 ? "kek" : "lol", Font_16x26, White);
 	oled_UpdateScreen();
+	osMessageQueuePut(timer_queue, buf, 0, 5000);
+#else
+	osMessageQueuePut(timer_queue, buf, 0, 5000);
 #endif
   /* USER CODE END global_timer_callback */
 }
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-     
+
 /* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

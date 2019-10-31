@@ -120,6 +120,28 @@ void oled_DrawPixel(uint8_t x, uint8_t y, OLED_COLOR color)
 	}
 }
 
+void oled_DrawData(const uint8_t *data, uint8_t width, uint8_t height)
+{
+	size_t i;
+	size_t j;
+
+	for (i = 0; i < height; i++)
+	{
+		for (j = 0; j < width; j++)
+		{
+			oled_DrawPixel(j*3,   i*3, data[width * i + j] == 0 ? White : Black);
+			oled_DrawPixel(j*3+1, i*3, data[width * i + j] == 0 ? White : Black);
+			oled_DrawPixel(j*3+2, i*3, data[width * i + j] == 0 ? White : Black);
+			oled_DrawPixel(j*3,   i*3+1, data[width * i + j] == 0 ? White : Black);
+			oled_DrawPixel(j*3+1, i*3+1, data[width * i + j] == 0 ? White : Black);
+			oled_DrawPixel(j*3+2, i*3+1, data[width * i + j] == 0 ? White : Black);
+			oled_DrawPixel(j*3,   i*3+2, data[width * i + j] == 0 ? White : Black);
+			oled_DrawPixel(j*3+1, i*3+2, data[width * i + j] == 0 ? White : Black);
+			oled_DrawPixel(j*3+2, i*3+2, data[width * i + j] == 0 ? White : Black);
+		}
+	}
+}
+
 //
 //  Draw 1 char to the screen buffer
 //	ch 		=> char om weg te schrijven
