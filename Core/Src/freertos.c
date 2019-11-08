@@ -190,8 +190,6 @@ void start_task_1(void *argument)
 	  /* Infinite loop */
 	  for(;;)
 	  {
-		  osDelay(1000);
-		  CDC_Transmit_FS("kek\r\n", 5);
 		  if (osMessageQueueGet(global_queue, buf, 0, 10) == osOK)
 		  {
 			  snk_choose_direction(&process, buf[0]);
@@ -270,33 +268,9 @@ void global_timer_callback(void *argument)
 {
   /* USER CODE BEGIN global_timer_callback */
 	uint8_t buf[MAX_TIMER_QUEUE_MSG_SIZE] = {0};
-#if 0
-    keyboard_key_set key_set;
-	int i;
-	int rc;
-	char display_str[40] = "error";
-
-	rc = keyboard_Get(&key_set);
-	if (rc == 0)
-	{
-		for (i = 0; i < 12; i++)
-		{
-			display_str[11 - i] = key_set % 2 == 0 ? '0' : '1';
-			key_set >>= 1;
-		}
-		display_str[12] = '\0';
-	}
-
-	//HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
-	oled_SetCursor(0, 0);
-	oled_Fill(Black);
-	oled_WriteString(display_str, Font_7x10, White);
-	//oled_WriteString((i++ % 2) == 0 ? "kek" : "lol", Font_16x26, White);
-	oled_UpdateScreen();
 	osMessageQueuePut(timer_queue, buf, 0, 5000);
-#else
-	osMessageQueuePut(timer_queue, buf, 0, 5000);
-#endif
+	CDC_Transmit_FS("kek\r\n", 5);
+
   /* USER CODE END global_timer_callback */
 }
 
