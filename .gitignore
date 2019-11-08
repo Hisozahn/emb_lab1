@@ -1,1 +1,9 @@
-/Debug/
+Debug/
+Drivers/
+Middlewares/
+USB_DEVICE/
+.*
+cubemx_1.xml
+*.ld
+startup/
+pm3p*

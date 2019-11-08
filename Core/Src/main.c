@@ -22,6 +22,7 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "i2c.h"
+#include "usb_device.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -101,7 +102,7 @@ int main(void)
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
-  MX_FREERTOS_Init();
+  MX_FREERTOS_Init(); 
 
   /* Start scheduler */
   osKernelStart();
@@ -115,7 +116,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-#if 0
+#if 1
 	  keyboard_key_set key_set;
 		int i;
 		int rc;
@@ -139,8 +140,7 @@ int main(void)
 		//oled_WriteString((i++ % 2) == 0 ? "kek" : "lol", Font_16x26, White);
 		oled_UpdateScreen();
 		HAL_Delay(5);
-#endif
-	  /*
+#else
 	  HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
 	      HAL_Delay(500);
 	      HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
@@ -153,7 +153,7 @@ int main(void)
 	      HAL_Delay(500);
 	      HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
 	      HAL_Delay(500);
-	      */
+#endif
   }
   /* USER CODE END 3 */
 }
@@ -173,10 +173,16 @@ void SystemClock_Config(void)
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
   /** Initializes the CPU, AHB and APB busses clocks 
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 15;
+  RCC_OscInitStruct.PLL.PLLN = 144;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 5;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();

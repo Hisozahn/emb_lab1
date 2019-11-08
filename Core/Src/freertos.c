@@ -25,13 +25,14 @@
 #include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
+/* USER CODE BEGIN Includes */     
 #include "gpio.h"
 #include "oled.h"
 #include "fonts.h"
 #include "keyboard.h"
 #include "../snk/snk.h"
 #include "../snk/snk_util.h"
+#include "usbd_cdc_if.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -71,7 +72,27 @@ void start_task_1(void *argument);
 void start_task_2(void *argument);
 void global_timer_callback(void *argument);
 
+extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
+
+/* Hook prototypes */
+void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName);
+
+/* USER CODE BEGIN 4 */
+__weak void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
+{
+   /* Run time stack overflow checking is performed if
+   configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
+   called if a stack overflow is detected. */
+
+	while (1)
+	{
+		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
+		HAL_Delay(500);
+	}
+
+}
+/* USER CODE END 4 */
 
 /**
   * @brief  FreeRTOS initialization
@@ -149,6 +170,11 @@ osKernelInitialize();
 /* USER CODE END Header_start_task_1 */
 void start_task_1(void *argument)
 {
+    
+                 
+  /* init code for USB_DEVICE */
+  MX_USB_DEVICE_Init();
+
   /* USER CODE BEGIN start_task_1 */
 	 uint8_t buf[MAX_GLOABL_QUEUE_MSG_SIZE] = {0};
 		  //snk_field_obstacle obstacles[] = {{{0, 0}, {5, 0}}};
@@ -164,6 +190,8 @@ void start_task_1(void *argument)
 	  /* Infinite loop */
 	  for(;;)
 	  {
+		  osDelay(1000);
+		  CDC_Transmit_FS("kek\r\n", 5);
 		  if (osMessageQueueGet(global_queue, buf, 0, 10) == osOK)
 		  {
 			  snk_choose_direction(&process, buf[0]);
@@ -203,7 +231,7 @@ void start_task_2(void *argument)
 
 	while (1)
 	{
-		osDelay(1..0);
+		osDelay(10);
 		rc = keyboard_Get(&key_set_new);
 		//rc = 1;
 		if (rc == 0 && key_set_new != key_set_old)
