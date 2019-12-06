@@ -33,6 +33,8 @@
 #include "../snk/snk.h"
 #include "../snk/snk_util.h"
 #include "usbd_cdc_if.h"
+#include "ip_addr.h"
+#include "api.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -85,13 +87,25 @@ __weak void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTask
    /* Run time stack overflow checking is performed if
    configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
    called if a stack overflow is detected. */
-
 	while (1)
 	{
 		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
 		HAL_Delay(500);
 	}
+}
 
+void myHook(int n)
+{
+	vTaskSuspendAll();
+	while (1)
+	{
+		for (int i = 0; i < n * 2; i++)
+		{
+			HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15);
+			HAL_Delay(500);
+		}
+		HAL_Delay(1000);
+	}
 }
 /* USER CODE END 4 */
 
@@ -178,6 +192,28 @@ void start_task_1(void *argument)
 
   /* init code for LWIP */
   MX_LWIP_Init();
+
+  struct netconn* conn;
+  ip4_addr_t addr = IPADDR4_INIT_BYTES(10, 10, 10, 10);
+  conn = netconn_new(NETCONN_TCP);
+  err_t rc;
+  uint8_t data[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+
+  if (conn == NULL)
+	  myHook(1);
+
+
+  rc = netconn_connect(conn, &addr, 0);
+  if (rc != ERR_OK)
+	  myHook(-rc);
+  else
+	  myHook(10);
+
+#if 0
+  rc = netconn_write(conn, data, sizeof(data), 0);
+  if (rc != ERR_OK)
+	  myHook(3);
+#endif
 
   /* USER CODE BEGIN start_task_1 */
 	 uint8_t buf[MAX_GLOABL_QUEUE_MSG_SIZE] = {0};
@@ -273,7 +309,7 @@ void global_timer_callback(void *argument)
   /* USER CODE BEGIN global_timer_callback */
 	uint8_t buf[MAX_TIMER_QUEUE_MSG_SIZE] = {0};
 	osMessageQueuePut(timer_queue, buf, 0, 5000);
-	CDC_Transmit_FS("kek\r\n", 5);
+	//CDC_Transmit_FS("kek\r\n", 5);
 
   /* USER CODE END global_timer_callback */
 }
